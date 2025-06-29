@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useCallback } from 'react';
 
 export interface Notification {
   id: string;
@@ -38,7 +38,7 @@ interface NotificationProviderProps {
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const addNotification = (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     const newNotification: Notification = {
       ...notification,
       id: Date.now().toString(),
@@ -46,17 +46,17 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
       read: false,
     };
 
-    setNotifications(prev => [newNotification, ...prev]);
+    setNotifications(prev => [newNotification, ...prev.slice(0, 49)]); // Limitar a 50 notificações
 
-    // Auto-remove success notifications after 5 seconds
+    // Auto-remove success notifications after 4 seconds (reduzido)
     if (notification.type === 'success') {
       setTimeout(() => {
         clearNotification(newNotification.id);
-      }, 5000);
+      }, 4000);
     }
-  };
+  }, []);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = useCallback((id: string) => {
     setNotifications(prev =>
       prev.map(notification =>
         notification.id === id
@@ -64,15 +64,15 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
           : notification
       )
     );
-  };
+  }, []);
 
-  const clearNotification = (id: string) => {
+  const clearNotification = useCallback((id: string) => {
     setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
+  }, []);
 
-  const clearAllNotifications = () => {
+  const clearAllNotifications = useCallback(() => {
     setNotifications([]);
-  };
+  }, []);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
