@@ -8,7 +8,7 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 // Importe as funções 'serverTimestamp' e 'Timestamp'
-import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export type UserType = 'candidate' | 'employer';
 
@@ -42,30 +42,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeProfile: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+      
+      // Clean up previous profile listener
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
       
       if (firebaseUser) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (userDoc.exists()) {
-            // O tipo de 'createdAt' e 'updatedAt' vindo do Firestore é Timestamp
-            const userData = userDoc.data() as UserProfile;
-            setUserProfile(userData);
-            setUserType(userData.userType);
-          }
+          // Force refresh of ID token to ensure Firestore recognizes the authenticated user
+          await firebaseUser.getIdToken(true);
+          
+          // Use onSnapshot instead of getDoc to handle race conditions
+          unsubscribeProfile = onSnapshot(
+            doc(db, 'users', firebaseUser.uid),
+            (userDoc) => {
+              if (userDoc.exists()) {
+                // O tipo de 'createdAt' e 'updatedAt' vindo do Firestore é Timestamp
+                const userData = userDoc.data() as UserProfile;
+                setUserProfile(userData);
+                setUserType(userData.userType);
+              } else {
+                // Document doesn't exist yet, reset profile state
+                setUserProfile(null);
+                setUserType(null);
+              }
+              setLoading(false);
+            },
+            (error) => {
+              console.error('Error listening to user profile:', error);
+              setUserProfile(null);
+              setUserType(null);
+              setLoading(false);
+            }
+          );
         } catch (error) {
-          console.error('Error fetching user profile:', error);
+          console.error('Error setting up user profile listener:', error);
+          setUserProfile(null);
+          setUserType(null);
+          setLoading(false);
         }
       } else {
         setUserProfile(null);
         setUserType(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+      }
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
