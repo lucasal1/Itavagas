@@ -55,6 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (firebaseUser) {
         try {
+          // Force refresh of ID token to ensure Firestore recognizes the authenticated user
+          await firebaseUser.getIdToken(true);
+          
           // Use onSnapshot instead of getDoc to handle race conditions
           unsubscribeProfile = onSnapshot(
             doc(db, 'users', firebaseUser.uid),
