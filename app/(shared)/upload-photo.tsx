@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { ArrowLeft, Camera, Image as ImageIcon, Upload, Check } from 'lucide-react-native';
-import * as ImagePicker from 'expo-image-picker';
 
 export default function UploadPhoto() {
   const router = useRouter();
@@ -14,52 +13,35 @@ export default function UploadPhoto() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const requestPermissions = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permissão necessária',
-        'Precisamos de permissão para acessar suas fotos.'
-      );
-      return false;
-    }
-    return true;
-  };
-
   const pickImage = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+    if (Platform.OS === 'web') {
+      // Web implementation using input file
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (event: any) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            setSelectedImage(e.target?.result as string);
+          };
+          reader.readAsDataURL(file);
+        }
+      };
+      input.click();
+    } else {
+      // Mobile implementation would use expo-image-picker
+      Alert.alert('Funcionalidade', 'Seleção de imagem disponível apenas na versão mobile');
     }
   };
 
   const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(
-        'Permissão necessária',
-        'Precisamos de permissão para usar a câmera.'
-      );
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      setSelectedImage(result.assets[0].uri);
+    if (Platform.OS === 'web') {
+      Alert.alert('Câmera', 'Funcionalidade de câmera não disponível na web');
+    } else {
+      // Mobile implementation would use expo-camera
+      Alert.alert('Funcionalidade', 'Câmera disponível apenas na versão mobile');
     }
   };
 
@@ -74,11 +56,8 @@ export default function UploadPhoto() {
       // Simulate upload process
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // In a real app, you would upload to Firebase Storage here
-      // and get the download URL to save in the user profile
-      
       await updateProfile({
-        profilePicture: selectedImage, // This would be the Firebase Storage URL
+        profilePicture: selectedImage,
       });
 
       addNotification({

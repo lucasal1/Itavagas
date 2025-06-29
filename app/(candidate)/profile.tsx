@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -54,13 +54,17 @@ export default function CandidateProfile() {
       icon: <Settings color="#64748B" size={20} />,
       title: 'Configurações',
       description: 'Privacidade e preferências',
-      onPress: () => {},
+      onPress: () => {
+        Alert.alert('Em breve', 'Funcionalidade em desenvolvimento');
+      },
     },
     {
       icon: <HelpCircle color="#64748B" size={20} />,
       title: 'Ajuda',
       description: 'Central de ajuda e suporte',
-      onPress: () => {},
+      onPress: () => {
+        Alert.alert('Ajuda', 'Entre em contato conosco pelo email: suporte@itavagas.com');
+      },
     },
   ];
 
@@ -70,9 +74,13 @@ export default function CandidateProfile() {
         <View style={styles.header}>
           <View style={styles.profileSection}>
             <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <User color="#FFFFFF" size={32} />
-              </View>
+              {userProfile?.profilePicture ? (
+                <Image source={{ uri: userProfile.profilePicture }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatar}>
+                  <User color="#FFFFFF" size={32} />
+                </View>
+              )}
               <TouchableOpacity 
                 style={styles.uploadButton}
                 onPress={() => router.push('/(shared)/upload-photo')}
@@ -202,6 +210,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E40AF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   uploadButton: {
     position: 'absolute',

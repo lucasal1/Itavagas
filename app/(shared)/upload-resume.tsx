@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { ArrowLeft, FileText, Upload, Download, Trash2, Eye } from 'lucide-react-native';
-import * as DocumentPicker from 'expo-document-picker';
 
 interface ResumeFile {
   id: string;
@@ -24,25 +23,37 @@ export default function UploadResume() {
   const [uploading, setUploading] = useState(false);
 
   const pickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        copyToCacheDirectory: true,
-      });
+    if (Platform.OS === 'web') {
+      // Web implementation using input file
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.pdf,.doc,.docx';
+      input.onchange = (event: any) => {
+        const file = event.target.files[0];
+        if (file) {
+          // Check file size (max 5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            Alert.alert('Erro', 'O arquivo deve ter no máximo 5MB');
+            return;
+          }
 
-      if (!result.canceled && result.assets[0]) {
-        const file = result.assets[0];
-        
-        // Check file size (max 5MB)
-        if (file.size && file.size > 5 * 1024 * 1024) {
-          Alert.alert('Erro', 'O arquivo deve ter no máximo 5MB');
-          return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const fileData = {
+              name: file.name,
+              size: file.size,
+              mimeType: file.type,
+              uri: e.target?.result as string,
+            };
+            uploadResume(fileData);
+          };
+          reader.readAsDataURL(file);
         }
-
-        uploadResume(file);
-      }
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível selecionar o arquivo');
+      };
+      input.click();
+    } else {
+      // Mobile implementation would use expo-document-picker
+      Alert.alert('Funcionalidade', 'Seleção de documentos disponível apenas na versão mobile');
     }
   };
 
@@ -63,9 +74,8 @@ export default function UploadResume() {
 
       setResumes(prev => [newResume, ...prev]);
 
-      // In a real app, you would upload to Firebase Storage here
       await updateProfile({
-        resumeUrl: file.uri, // This would be the Firebase Storage URL
+        resumeUrl: file.uri,
       });
 
       addNotification({
@@ -124,6 +134,25 @@ export default function UploadResume() {
     });
   };
 
+  const handleViewResume = (resume: ResumeFile) => {
+    if (Platform.OS === 'web') {
+      window.open(resume.uri, '_blank');
+    } else {
+      Alert.alert('Visualizar', 'Funcionalidade de visualização disponível apenas na web');
+    }
+  };
+
+  const handleDownloadResume = (resume: ResumeFile) => {
+    if (Platform.OS === 'web') {
+      const link = document.createElement('a');
+      link.href = resume.uri;
+      link.download = resume.name;
+      link.click();
+    } else {
+      Alert.alert('Download', 'Funcionalidade de download disponível apenas na web');
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -167,17 +196,23 @@ export default function UploadResume() {
                   </View>
                   
                   <View style={styles.resumeInfo}>
-                    <Text style={styles.resumeName}>{resume.name}</Text>
+                    <Text style={styles.resumeName} numberOfLines={1}>{resume.name}</Text>
                     <Text style={styles.resumeMeta}>
                       {formatFileSize(resume.size)} • {formatDate(resume.uploadedAt)}
                     </Text>
                   </View>
 
                   <View style={styles.resumeActions}>
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => handleViewResume(resume)}
+                    >
                       <Eye color="#64748B" size={16} />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => handleDownloadResume(resume)}
+                    >
                       <Download color="#64748B" size={16} />
                     </TouchableOpacity>
                     <TouchableOpacity 

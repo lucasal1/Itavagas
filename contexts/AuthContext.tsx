@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
@@ -11,6 +11,8 @@ interface UserProfile {
   phone?: string;
   location?: string;
   profileComplete: boolean;
+  profilePicture?: string;
+  resumeUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -73,6 +75,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 phone: data.phone || '',
                 location: data.location || '',
                 profileComplete: data.profileComplete || false,
+                profilePicture: data.profilePicture || '',
+                resumeUrl: data.resumeUrl || '',
                 createdAt: data.createdAt?.toDate() || new Date(),
                 updatedAt: data.updatedAt?.toDate() || new Date(),
               };
@@ -106,7 +110,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -114,9 +118,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(false);
       throw error;
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, name: string, type: 'candidate' | 'employer') => {
+  const signUp = useCallback(async (email: string, password: string, name: string, type: 'candidate' | 'employer') => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -129,6 +133,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         phone: '',
         location: 'Sertão de Itaparica, BA',
         profileComplete: false,
+        profilePicture: '',
+        resumeUrl: '',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -138,9 +144,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(false);
       throw error;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setLoading(true);
     try {
       await signOut(auth);
@@ -148,9 +154,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setLoading(false);
       throw error;
     }
-  };
+  }, []);
 
-  const updateProfile = async (data: Partial<UserProfile>) => {
+  const updateProfile = useCallback(async (data: Partial<UserProfile>) => {
     if (!user) throw new Error('No user logged in');
     
     try {
@@ -165,7 +171,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error('❌ Profile update error:', error);
       throw error;
     }
-  };
+  }, [user]);
 
   const value = { 
     user, 
