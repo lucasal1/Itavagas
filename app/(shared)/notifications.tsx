@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { ArrowLeft, CheckCircle, XCircle, AlertCircle, Info, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Info, Trash2 } from 'lucide-react-native';
 
 export default function Notifications() {
   const router = useRouter();

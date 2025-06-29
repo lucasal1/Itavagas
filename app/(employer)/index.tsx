@@ -5,17 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { useJobs } from '@/contexts/JobsContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { 
-  Plus, 
-  Eye, 
-  Users, 
-  Clock, 
-  MoreVertical,
-  TrendingUp,
-  UserCheck,
-  FileText,
-  Bell
-} from 'lucide-react-native';
+import { Plus, Eye, Users, Clock, MoveVertical as MoreVertical, TrendingUp, UserCheck, FileText, Bell } from 'lucide-react-native';
 
 export default function EmployerDashboard() {
   const router = useRouter();
