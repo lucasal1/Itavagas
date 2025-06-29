@@ -1,19 +1,25 @@
 import { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
-
-const { width, height } = Dimensions.get('window');
 
 export default function SplashScreen() {
   const router = useRouter();
   const { user, userType, loading } = useAuth();
 
   useEffect(() => {
+    console.log('SplashScreen - Auth state:', { 
+      hasUser: !!user, 
+      userType, 
+      loading,
+      userId: user?.uid 
+    });
+
     if (!loading) {
       const timer = setTimeout(() => {
         if (user && userType) {
+          console.log('User authenticated, redirecting to:', userType);
           // User is authenticated, redirect to appropriate dashboard
           if (userType === 'candidate') {
             router.replace('/(candidate)');
@@ -21,40 +27,16 @@ export default function SplashScreen() {
             router.replace('/(employer)');
           }
         } else {
+          console.log('User not authenticated, redirecting to auth');
           // User is not authenticated, go to auth flow
           router.replace('/auth');
         }
-      }, 2000); // Increased delay to ensure proper loading
+      }, 1500);
 
       return () => clearTimeout(timer);
     }
   }, [user, userType, loading, router]);
 
-  // Show loading state while auth is being determined
-  if (loading) {
-    return (
-      <LinearGradient
-        colors={['#1E40AF', '#3B82F6', '#60A5FA']}
-        style={styles.container}
-      >
-        <View style={styles.content}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>ITA</Text>
-            </View>
-            <Text style={styles.appName}>ITAVAGAS</Text>
-            <Text style={styles.tagline}>Conectando talentos do Sertão de Itaparica</Text>
-          </View>
-          
-          <View style={styles.footer}>
-            <Text style={styles.loadingText}>Carregando...</Text>
-          </View>
-        </View>
-      </LinearGradient>
-    );
-  }
-
-  // Show redirecting state
   return (
     <LinearGradient
       colors={['#1E40AF', '#3B82F6', '#60A5FA']}
@@ -71,7 +53,8 @@ export default function SplashScreen() {
         
         <View style={styles.footer}>
           <Text style={styles.loadingText}>
-            {user && userType ? 'Redirecionando...' : 'Iniciando...'}
+            {loading ? 'Carregando...' : 
+             user && userType ? 'Redirecionando...' : 'Iniciando...'}
           </Text>
         </View>
       </View>

@@ -24,12 +24,17 @@ export default function Login() {
 
     setLoading(true);
     try {
-      console.log('Starting login process...');
+      console.log('🔑 Starting login process...');
       await signIn(formData.email, formData.password);
-      console.log('Login successful, navigation will be handled by AuthContext');
-      // Don't manually navigate - let the AuthContext and app/index.tsx handle it
+      console.log('✅ Login successful, navigation will be handled by AuthContext');
+      
+      // Clear form after successful login
+      setFormData({ email: '', password: '' });
+      
+      // The navigation will be handled automatically by the auth state change
+      // in app/index.tsx, so we don't need to manually navigate here
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       
       // More specific error handling
       let errorMessage = 'E-mail ou senha incorretos';
@@ -42,6 +47,8 @@ export default function Login() {
         errorMessage = 'E-mail inválido. Verifique o formato do e-mail.';
       } else if (error.code === 'auth/too-many-requests') {
         errorMessage = 'Muitas tentativas de login. Tente novamente mais tarde.';
+      } else if (error.code === 'auth/invalid-credential') {
+        errorMessage = 'Credenciais inválidas. Verifique seu e-mail e senha.';
       }
       
       Alert.alert('Erro', errorMessage);
