@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Building, Mail, Phone, MapPin, CreditCard as Edit3, Upload, LogOut, Settings, Bell, CircleHelp as HelpCircle, ChartBar as BarChart3, Users } from 'lucide-react-native';
+import { Building, Mail, Phone, MapPin, CreditCard as Edit3, Upload, LogOut, Settings, Bell, CircleHelp as HelpCircle, ChartBar as BarChart3, Users, Camera } from 'lucide-react-native';
 
 export default function EmployerProfile() {
   const { userProfile, logout } = useAuth();
@@ -33,6 +33,12 @@ export default function EmployerProfile() {
       onPress: () => router.push('/(shared)/edit-profile'),
     },
     {
+      icon: <Camera color="#64748B" size={20} />,
+      title: 'Logo da Empresa',
+      description: 'Atualizar logo da empresa',
+      onPress: () => router.push('/(shared)/upload-photo'),
+    },
+    {
       icon: <BarChart3 color="#64748B" size={20} />,
       title: 'Relatórios',
       description: 'Estatísticas de vagas e candidatos',
@@ -42,13 +48,13 @@ export default function EmployerProfile() {
       icon: <Users color="#64748B" size={20} />,
       title: 'Gerenciar Vagas',
       description: 'Editar e pausar vagas ativas',
-      onPress: () => {},
+      onPress: () => router.push('/(shared)/manage-jobs'),
     },
     {
       icon: <Bell color="#64748B" size={20} />,
       title: 'Notificações',
       description: 'Configurar alertas de candidaturas',
-      onPress: () => {},
+      onPress: () => router.push('/(shared)/notifications'),
     },
     {
       icon: <Settings color="#64748B" size={20} />,
@@ -73,7 +79,10 @@ export default function EmployerProfile() {
               <View style={styles.avatar}>
                 <Building color="#FFFFFF" size={32} />
               </View>
-              <TouchableOpacity style={styles.uploadButton}>
+              <TouchableOpacity 
+                style={styles.uploadButton}
+                onPress={() => router.push('/(shared)/upload-photo')}
+              >
                 <Upload color="#1E40AF" size={16} />
               </TouchableOpacity>
             </View>
@@ -129,7 +138,7 @@ export default function EmployerProfile() {
               <Phone color="#64748B" size={20} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Telefone</Text>
-                <Text style={styles.infoValue}>Não informado</Text>
+                <Text style={styles.infoValue}>{userProfile?.phone || 'Não informado'}</Text>
               </View>
             </View>
             
@@ -137,7 +146,7 @@ export default function EmployerProfile() {
               <MapPin color="#64748B" size={20} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Localização</Text>
-                <Text style={styles.infoValue}>Sertão de Itaparica, BA</Text>
+                <Text style={styles.infoValue}>{userProfile?.location || 'Sertão de Itaparica, BA'}</Text>
               </View>
             </View>
           </View>

@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useJobs } from '@/contexts/JobsContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { 
+  ArrowLeft,
+  Save,
   Briefcase, 
   MapPin, 
   DollarSign, 
@@ -15,10 +17,13 @@ import {
   X
 } from 'lucide-react-native';
 
-export default function CreateJob() {
+export default function EditJob() {
   const router = useRouter();
-  const { createJob } = useJobs();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const { jobs, updateJob } = useJobs();
   const { addNotification } = useNotifications();
+  
+  const job = jobs.find(j => j.id === id);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -32,6 +37,23 @@ export default function CreateJob() {
   });
   
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (job) {
+      setFormData({
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        salary: job.salary,
+        type: job.type,
+        description: job.description,
+        requirements: job.requirements.length > 0 ? job.requirements : [''],
+        status: job.status,
+      });
+    } else {
+      router.back();
+    }
+  }, [job]);
 
   const jobTypes = [
     'CLT - Integral',
@@ -65,33 +87,32 @@ export default function CreateJob() {
     }));
   };
 
-  const handlePublish = async () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.description || !formData.location || !formData.company) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios');
       return;
     }
 
-    // Filter out empty requirements
     const filteredRequirements = formData.requirements.filter(req => req.trim() !== '');
 
     setLoading(true);
     try {
-      await createJob({
+      await updateJob(id!, {
         ...formData,
         requirements: filteredRequirements,
       });
       
       addNotification({
-        title: 'Vaga publicada!',
-        message: 'Sua vaga foi publicada com sucesso e já está visível para candidatos.',
+        title: 'Vaga atualizada!',
+        message: 'As alterações foram salvas com sucesso.',
         type: 'success',
       });
       
       router.back();
     } catch (error: any) {
       addNotification({
-        title: 'Erro ao publicar vaga',
-        message: error.message || 'Não foi possível publicar a vaga.',
+        title: 'Erro ao atualizar vaga',
+        message: error.message || 'Não foi possível salvar as alterações.',
         type: 'error',
       });
     } finally {
@@ -99,11 +120,27 @@ export default function CreateJob() {
     }
   };
 
+  if (!job) {
+    return null;
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Nova Vaga</Text>
-        <Text style={styles.headerSubtitle}>Preencha os dados da oportunidade</Text>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.back()}
+        >
+          <ArrowLeft color="#1F2937" size={24} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Editar Vaga</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, loading && styles.disabledButton]}
+          onPress={handleSave}
+          disabled={loading}
+        >
+          <Save color="#1E40AF" size={20} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -249,25 +286,6 @@ export default function CreateJob() {
           </View>
         </View>
 
-        <View style={styles.actions}>
-          <TouchableOpacity 
-            style={styles.draftButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.draftButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.publishButton, loading && styles.disabledButton]} 
-            onPress={handlePublish}
-            disabled={loading}
-          >
-            <Text style={styles.publishButtonText}>
-              {loading ? 'Publicando...' : 'Publicar Vaga'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
@@ -280,22 +298,41 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontFamily: 'Inter-SemiBold',
     color: '#1F2937',
-    marginBottom: 4,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 16,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Inter-Regular',
-    color: '#64748B',
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
   content: {
     flex: 1,
@@ -402,41 +439,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  actions: {
-    flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    gap: 12,
-  },
-  draftButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-  },
-  draftButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#64748B',
-  },
-  publishButton: {
-    flex: 1,
-    backgroundColor: '#1E40AF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  publishButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: '#FFFFFF',
   },
   bottomPadding: {
     height: 40,

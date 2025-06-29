@@ -1,24 +1,40 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../config/firebase'; // Verifique se o caminho para o seu config do firebase está correto
+import { doc, setDoc, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../config/firebase';
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  userType: 'candidate' | 'employer';
+  phone?: string;
+  location?: string;
+  profileComplete: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   userType: 'candidate' | 'employer' | null;
   loading: boolean;
-  signIn: (email: string, pass: string) => Promise<void>;
-  signUp: (email: string, pass: string, userType: 'candidate' | 'employer') => Promise<void>;
-  logOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, userType: 'candidate' | 'employer') => Promise<void>;
+  logout: () => Promise<void>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  userProfile: null,
   userType: null,
   loading: true,
   signIn: async () => {},
   signUp: async () => {},
-  logOut: async () => {},
+  logout: async () => {},
+  updateProfile: async () => {},
 });
 
 export const useAuth = () => {
@@ -31,77 +47,155 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userType, setUserType] = useState<'candidate' | 'employer' | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 AuthProvider: Setting up auth state listener');
     let unsubscribeSnapshot: () => void = () => {};
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      console.log('🔄 Auth state changed:', { hasUser: !!currentUser, userId: currentUser?.uid });
+      
+      // Clean up previous snapshot listener
       unsubscribeSnapshot();
+      
       if (currentUser) {
         setUser(currentUser);
-        const docRef = doc(db, "users", currentUser.uid);
-        unsubscribeSnapshot = onSnapshot(docRef, (doc) => {
-          if (doc.exists()) {
-            setUserType(doc.data().userType);
-          } else {
-            // Este log é o que vimos. É normal durante o primeiro instante após o registo.
-            console.log("A aguardar a criação do documento do utilizador...");
-            setUserType(null);
-          }
-          setLoading(false);
-        }, (error) => {
-            console.error("Erro ao ouvir o documento do utilizador:", error);
+        
+        try {
+          // Set up real-time listener for user profile
+          const docRef = doc(db, "users", currentUser.uid);
+          unsubscribeSnapshot = onSnapshot(docRef, (doc) => {
+            if (doc.exists()) {
+              const data = doc.data();
+              const profile: UserProfile = {
+                id: currentUser.uid,
+                name: data.name || '',
+                email: data.email || currentUser.email || '',
+                userType: data.userType,
+                phone: data.phone || '',
+                location: data.location || '',
+                profileComplete: data.profileComplete || false,
+                createdAt: data.createdAt?.toDate() || new Date(),
+                updatedAt: data.updatedAt?.toDate() || new Date(),
+              };
+              
+              console.log('✅ User profile loaded:', profile);
+              setUserProfile(profile);
+              setUserType(profile.userType);
+            } else {
+              console.log('⚠️ User document does not exist');
+              setUserProfile(null);
+              setUserType(null);
+            }
             setLoading(false);
-        });
+          }, (error) => {
+            console.error('❌ Error listening to user document:', error);
+            setLoading(false);
+          });
+        } catch (error) {
+          console.error('❌ Error setting up user listener:', error);
+          setLoading(false);
+        }
       } else {
+        console.log('🚪 User logged out');
         setUser(null);
+        setUserProfile(null);
         setUserType(null);
         setLoading(false);
       }
     });
+
     return () => {
+      console.log('🧹 Cleaning up auth listeners');
       unsubscribeAuth();
       unsubscribeSnapshot();
     };
   }, []);
 
-  const signIn = async (email: string, pass: string) => {
-    await signInWithEmailAndPassword(auth, email, pass);
-  };
-
-  // --- FUNÇÃO CRÍTICA CORRIGIDA ---
-  const signUp = async (email: string, pass: string, type: 'candidate' | 'employer') => {
+  const signIn = async (email: string, password: string) => {
+    console.log('🔑 Starting sign in process');
+    setLoading(true);
     try {
-      // 1. Cria o utilizador no serviço de Autenticação do Firebase
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      const { user } = userCredential;
-      
-      console.log(`Utilizador criado na autenticação: ${user.uid}. A criar documento no Firestore...`);
-
-      // 2. CRIA O DOCUMENTO na coleção 'users' do Firestore com o mesmo UID.
-      //    Esta é a parte que estava a falhar.
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        userType: type,
-        createdAt: new Date(), // Boa prática para saber quando foi criado
-      });
-
-      console.log(`Documento do utilizador criado com sucesso no Firestore.`);
-
+      await signInWithEmailAndPassword(auth, email, password);
+      console.log('✅ Sign in successful');
     } catch (error) {
-      console.error("Erro durante o processo de registo:", error);
-      // Lançar o erro novamente para que a UI possa mostrá-lo ao utilizador
+      console.error('❌ Sign in error:', error);
       throw error;
     }
   };
 
-  const logOut = async () => {
-    await signOut(auth);
+  const signUp = async (email: string, password: string, name: string, type: 'candidate' | 'employer') => {
+    console.log('📝 Starting sign up process');
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const { user } = userCredential;
+      
+      console.log('✅ User created in auth, creating profile document');
+      
+      const profileData = {
+        name,
+        email: user.email,
+        userType: type,
+        phone: '',
+        location: 'Sertão de Itaparica, BA',
+        profileComplete: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      await setDoc(doc(db, "users", user.uid), profileData);
+      console.log('✅ User profile document created');
+    } catch (error) {
+      console.error('❌ Sign up error:', error);
+      throw error;
+    }
   };
 
-  const value = { user, userType, loading, signIn, signUp, logOut };
+  const logout = async () => {
+    console.log('🚪 Logging out');
+    setLoading(true);
+    try {
+      await signOut(auth);
+      console.log('✅ Logout successful');
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      throw error;
+    }
+  };
+
+  const updateProfile = async (data: Partial<UserProfile>) => {
+    if (!user) throw new Error('No user logged in');
+    
+    console.log('📝 Updating user profile');
+    try {
+      const docRef = doc(db, "users", user.uid);
+      const updateData = {
+        ...data,
+        updatedAt: new Date(),
+      };
+      
+      await updateDoc(docRef, updateData);
+      console.log('✅ Profile updated successfully');
+    } catch (error) {
+      console.error('❌ Profile update error:', error);
+      throw error;
+    }
+  };
+
+  const value = { 
+    user, 
+    userProfile, 
+    userType, 
+    loading, 
+    signIn, 
+    signUp, 
+    logout, 
+    updateProfile 
+  };
 
   return (
     <AuthContext.Provider value={value}>
