@@ -39,13 +39,9 @@ export default function Register() {
     setLoading(true);
     try {
       await signUp(formData.email, formData.password, formData.name, userType!);
-      
-      if (userType === 'candidate') {
-        router.replace('/(candidate)');
-      } else {
-        router.replace('/(employer)');
-      }
+      // Don't manually navigate - let the AuthContext and app/index.tsx handle it
     } catch (error: any) {
+      console.error('Registration error:', error);
       Alert.alert('Erro', error.message || 'Erro ao criar conta');
     } finally {
       setLoading(false);
@@ -94,6 +90,7 @@ export default function Register() {
                 onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
                 placeholder={userType === 'candidate' ? 'Digite seu nome completo' : 'Digite o nome da empresa'}
                 placeholderTextColor="#94A3B8"
+                autoComplete="name"
               />
             </View>
 
@@ -107,6 +104,7 @@ export default function Register() {
                 placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
               />
             </View>
 
@@ -120,6 +118,7 @@ export default function Register() {
                   placeholder="Digite sua senha"
                   placeholderTextColor="#94A3B8"
                   secureTextEntry={!showPassword}
+                  autoComplete="new-password"
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}
@@ -143,6 +142,7 @@ export default function Register() {
                   placeholder="Confirme sua senha"
                   placeholderTextColor="#94A3B8"
                   secureTextEntry={!showConfirmPassword}
+                  autoComplete="new-password"
                 />
                 <TouchableOpacity
                   style={styles.eyeButton}

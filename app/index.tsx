@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, Text, StyleSheet, Image, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,22 +11,24 @@ export default function SplashScreen() {
   const { user, userType, loading } = useAuth();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!loading) {
+    if (!loading) {
+      const timer = setTimeout(() => {
         if (user && userType) {
+          // User is authenticated, redirect to appropriate dashboard
           if (userType === 'candidate') {
             router.replace('/(candidate)');
-          } else {
+          } else if (userType === 'employer') {
             router.replace('/(employer)');
           }
         } else {
+          // User is not authenticated, go to auth flow
           router.replace('/auth');
         }
-      }
-    }, 2000);
+      }, 1500);
 
-    return () => clearTimeout(timer);
-  }, [user, userType, loading]);
+      return () => clearTimeout(timer);
+    }
+  }, [user, userType, loading, router]);
 
   return (
     <LinearGradient
@@ -43,7 +45,9 @@ export default function SplashScreen() {
         </View>
         
         <View style={styles.footer}>
-          <Text style={styles.loadingText}>Carregando...</Text>
+          <Text style={styles.loadingText}>
+            {loading ? 'Carregando...' : 'Redirecionando...'}
+          </Text>
         </View>
       </View>
     </LinearGradient>
