@@ -4,17 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useJobs } from '@/contexts/JobsContext';
 import { useNotifications } from '@/contexts/NotificationContext';
-import { 
-  ArrowLeft, 
-  Plus, 
-  MoreVertical, 
-  Edit3, 
-  Pause, 
-  Play, 
-  Trash2,
-  Eye,
-  Users
-} from 'lucide-react-native';
+import { ArrowLeft, Plus, MoveVertical as MoreVertical, CreditCard as Edit3, Pause, Play, Trash2, Eye, Users } from 'lucide-react-native';
 
 export default function ManageJobs() {
   const router = useRouter();
