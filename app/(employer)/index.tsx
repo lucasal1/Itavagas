@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { useJobs } from '@/contexts/JobsContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { 
   Plus, 
   Eye, 
@@ -10,52 +13,15 @@ import {
   MoreVertical,
   TrendingUp,
   UserCheck,
-  FileText 
+  FileText,
+  Bell
 } from 'lucide-react-native';
 
-interface JobPosting {
-  id: string;
-  title: string;
-  status: 'active' | 'paused' | 'closed';
-  applicants: number;
-  views: number;
-  postedAt: Date;
-}
-
 export default function EmployerDashboard() {
+  const router = useRouter();
   const { userProfile } = useAuth();
-  const [jobs, setJobs] = useState<JobPosting[]>([]);
-
-  useEffect(() => {
-    // Mock data
-    const mockJobs: JobPosting[] = [
-      {
-        id: '1',
-        title: 'Desenvolvedor Frontend',
-        status: 'active',
-        applicants: 12,
-        views: 45,
-        postedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: '2',
-        title: 'Assistente Administrativo',
-        status: 'active',
-        applicants: 8,
-        views: 32,
-        postedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      },
-      {
-        id: '3',
-        title: 'Vendedor',
-        status: 'paused',
-        applicants: 15,
-        views: 67,
-        postedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      },
-    ];
-    setJobs(mockJobs);
-  }, []);
+  const { jobs, applications, loading } = useJobs();
+  const { unreadCount } = useNotifications();
 
   const stats = {
     totalJobs: jobs.length,
@@ -95,9 +61,27 @@ export default function EmployerDashboard() {
           </Text>
           <Text style={styles.subGreeting}>Gerencie suas vagas e candidatos</Text>
         </View>
-        <TouchableOpacity style={styles.createButton}>
-          <Plus color="#FFFFFF" size={20} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={() => router.push('/(shared)/notifications')}
+          >
+            <Bell color="#64748B" size={20} />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={() => router.push('/(employer)/create-job')}
+          >
+            <Plus color="#FFFFFF" size={20} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -142,67 +126,106 @@ export default function EmployerDashboard() {
         <View style={styles.jobsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Suas Vagas</Text>
-            <TouchableOpacity style={styles.seeAllButton}>
+            <TouchableOpacity 
+              style={styles.seeAllButton}
+              onPress={() => router.push('/(shared)/manage-jobs')}
+            >
               <Text style={styles.seeAllText}>Ver todas</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.jobsList}>
-            {jobs.map((job) => (
-              <TouchableOpacity key={job.id} style={styles.jobCard}>
-                <View style={styles.jobHeader}>
-                  <View style={styles.jobTitleContainer}>
-                    <Text style={styles.jobTitle}>{job.title}</Text>
-                    <View style={styles.jobMeta}>
-                      <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(job.status)}15` }]}>
-                        <View style={[styles.statusDot, { backgroundColor: getStatusColor(job.status) }]} />
-                        <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
-                          {getStatusText(job.status)}
-                        </Text>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Carregando vagas...</Text>
+            </View>
+          ) : jobs.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyTitle}>Nenhuma vaga criada</Text>
+              <Text style={styles.emptyDescription}>
+                Crie sua primeira vaga para começar a receber candidaturas.
+              </Text>
+              <TouchableOpacity 
+                style={styles.createFirstJobButton}
+                onPress={() => router.push('/(employer)/create-job')}
+              >
+                <Plus color="#FFFFFF" size={16} />
+                <Text style={styles.createFirstJobButtonText}>Criar primeira vaga</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.jobsList}>
+              {jobs.slice(0, 3).map((job) => (
+                <TouchableOpacity 
+                  key={job.id} 
+                  style={styles.jobCard}
+                  onPress={() => router.push(`/(shared)/job-details?id=${job.id}`)}
+                >
+                  <View style={styles.jobHeader}>
+                    <View style={styles.jobTitleContainer}>
+                      <Text style={styles.jobTitle}>{job.title}</Text>
+                      <View style={styles.jobMeta}>
+                        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(job.status)}15` }]}>
+                          <View style={[styles.statusDot, { backgroundColor: getStatusColor(job.status) }]} />
+                          <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
+                            {getStatusText(job.status)}
+                          </Text>
+                        </View>
+                        <Text style={styles.jobDate}>Publicada em {formatDate(job.postedAt)}</Text>
                       </View>
-                      <Text style={styles.jobDate}>Publicada em {formatDate(job.postedAt)}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.moreButton}>
+                      <MoreVertical color="#64748B" size={20} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.jobStats}>
+                    <View style={styles.jobStat}>
+                      <Users color="#64748B" size={16} />
+                      <Text style={styles.jobStatText}>{job.applicants} candidatos</Text>
+                    </View>
+                    <View style={styles.jobStat}>
+                      <Eye color="#64748B" size={16} />
+                      <Text style={styles.jobStatText}>{job.views} visualizações</Text>
                     </View>
                   </View>
-                  <TouchableOpacity style={styles.moreButton}>
-                    <MoreVertical color="#64748B" size={20} />
-                  </TouchableOpacity>
-                </View>
 
-                <View style={styles.jobStats}>
-                  <View style={styles.jobStat}>
-                    <Users color="#64748B" size={16} />
-                    <Text style={styles.jobStatText}>{job.applicants} candidatos</Text>
+                  <View style={styles.jobActions}>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => router.push('/(employer)/candidates')}
+                    >
+                      <Text style={styles.actionButtonText}>Ver Candidatos</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.primaryActionButton}
+                      onPress={() => router.push(`/(shared)/edit-job?id=${job.id}`)}
+                    >
+                      <Text style={styles.primaryActionButtonText}>Editar</Text>
+                    </TouchableOpacity>
                   </View>
-                  <View style={styles.jobStat}>
-                    <Eye color="#64748B" size={16} />
-                    <Text style={styles.jobStatText}>{job.views} visualizações</Text>
-                  </View>
-                </View>
-
-                <View style={styles.jobActions}>
-                  <TouchableOpacity style={styles.actionButton}>
-                    <Text style={styles.actionButtonText}>Ver Candidatos</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.primaryActionButton}>
-                    <Text style={styles.primaryActionButtonText}>Editar</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.quickActions}>
           <Text style={styles.sectionTitle}>Ações Rápidas</Text>
           
           <View style={styles.actionsGrid}>
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => router.push('/(employer)/create-job')}
+            >
               <Plus color="#1E40AF" size={32} />
               <Text style={styles.actionCardTitle}>Nova Vaga</Text>
               <Text style={styles.actionCardDescription}>Publique uma nova oportunidade</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionCard}>
+            <TouchableOpacity 
+              style={styles.actionCard}
+              onPress={() => router.push('/(employer)/candidates')}
+            >
               <Users color="#10B981" size={32} />
               <Text style={styles.actionCardTitle}>Candidatos</Text>
               <Text style={styles.actionCardDescription}>Gerencie candidaturas</Text>
@@ -244,6 +267,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  notificationButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  notificationBadgeText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Bold',
+    color: '#FFFFFF',
   },
   createButton: {
     width: 44,
@@ -324,6 +377,48 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Medium',
     color: '#1E40AF',
+  },
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+  },
+  emptyContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-SemiBold',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyDescription: {
+    fontSize: 14,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  createFirstJobButton: {
+    flexDirection: 'row',
+    backgroundColor: '#1E40AF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    gap: 8,
+  },
+  createFirstJobButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: '#FFFFFF',
   },
   jobsList: {
     gap: 16,

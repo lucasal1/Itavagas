@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useJobs } from '@/contexts/JobsContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { 
   Briefcase, 
   MapPin, 
@@ -15,6 +17,8 @@ import {
 
 export default function CreateJob() {
   const router = useRouter();
+  const { createJob } = useJobs();
+  const { addNotification } = useNotifications();
   
   const [formData, setFormData] = useState({
     title: '',
@@ -24,6 +28,7 @@ export default function CreateJob() {
     type: 'CLT - Integral',
     description: '',
     requirements: [''],
+    status: 'active' as const,
   });
   
   const [loading, setLoading] = useState(false);
@@ -61,21 +66,34 @@ export default function CreateJob() {
   };
 
   const handlePublish = async () => {
-    if (!formData.title || !formData.description || !formData.location) {
+    if (!formData.title || !formData.description || !formData.location || !formData.company) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos obrigatórios');
       return;
     }
 
+    // Filter out empty requirements
+    const filteredRequirements = formData.requirements.filter(req => req.trim() !== '');
+
     setLoading(true);
     try {
-      // Here you would typically save to Firebase/database
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      await createJob({
+        ...formData,
+        requirements: filteredRequirements,
+      });
       
-      Alert.alert('Sucesso', 'Vaga publicada com sucesso!', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível publicar a vaga');
+      addNotification({
+        title: 'Vaga publicada!',
+        message: 'Sua vaga foi publicada com sucesso e já está visível para candidatos.',
+        type: 'success',
+      });
+      
+      router.back();
+    } catch (error: any) {
+      addNotification({
+        title: 'Erro ao publicar vaga',
+        message: error.message || 'Não foi possível publicar a vaga.',
+        type: 'error',
+      });
     } finally {
       setLoading(false);
     }
@@ -103,6 +121,20 @@ export default function CreateJob() {
                 value={formData.title}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
                 placeholder="Ex: Desenvolvedor Frontend"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputHeader}>
+                <Briefcase color="#64748B" size={20} />
+                <Text style={styles.inputLabel}>Nome da Empresa *</Text>
+              </View>
+              <TextInput
+                style={styles.input}
+                value={formData.company}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, company: text }))}
+                placeholder="Ex: TechVagas Ltda"
                 placeholderTextColor="#94A3B8"
               />
             </View>
@@ -222,7 +254,7 @@ export default function CreateJob() {
             style={styles.draftButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.draftButtonText}>Salvar Rascunho</Text>
+            <Text style={styles.draftButtonText}>Cancelar</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 

@@ -3,8 +3,12 @@ import { useRouter, useSegments } from 'expo-router';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { JobsProvider } from '@/contexts/JobsContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
+import NotificationOverlay from '@/components/NotificationOverlay';
+import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -48,19 +52,24 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth" />
-      <Stack.Screen name="(candidate)" />
-      <Stack.Screen name="(employer)" />
-      <Stack.Screen name="(shared)" />
-      <Stack.Screen name="+not-found" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="auth" />
+        <Stack.Screen name="(candidate)" />
+        <Stack.Screen name="(employer)" />
+        <Stack.Screen name="(shared)" />
+        <Stack.Screen name="+not-found" />
+      </Stack>
+      <NotificationOverlay />
+    </>
   );
 }
 
 // Layout raiz que envolve toda a aplicação
 export default function RootLayout() {
+  useFrameworkReady();
+  
   const [fontsLoaded, fontError] = useFonts({
     'Inter-Regular': Inter_400Regular,
     'Inter-Medium': Inter_500Medium,
@@ -79,9 +88,13 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-      <StatusBar style="auto" />
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <JobsProvider>
+          <RootLayoutNav />
+          <StatusBar style="auto" />
+        </JobsProvider>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
