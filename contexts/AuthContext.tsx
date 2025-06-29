@@ -7,7 +7,8 @@ import {
   signOut,
   onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+// Importe as funções 'serverTimestamp' e 'Timestamp'
+import { doc, getDoc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export type UserType = 'candidate' | 'employer';
 
@@ -17,8 +18,8 @@ interface UserProfile {
   email: string;
   userType: UserType;
   profileComplete: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Timestamp; // Alterado para Timestamp
+  updatedAt: Timestamp; // Alterado para Timestamp
 }
 
 interface AuthContextType {
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
+            // O tipo de 'createdAt' e 'updatedAt' vindo do Firestore é Timestamp
             const userData = userDoc.data() as UserProfile;
             setUserProfile(userData);
             setUserType(userData.userType);
@@ -78,20 +80,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
       
-      const userProfile: UserProfile = {
+      // Use serverTimestamp() para as datas
+      const newUserProfile = {
         id: firebaseUser.uid,
         name,
         email,
         userType,
         profileComplete: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'users', firebaseUser.uid), userProfile);
-      setUserProfile(userProfile);
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
+      
+      // Para o estado local, criamos um objeto com o Timestamp atual
+      const userProfileForState: UserProfile = {
+        ...newUserProfile,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+
+      setUserProfile(userProfileForState);
       setUserType(userType);
     } catch (error) {
+      console.error("Erro detalhado no signUp:", error);
       throw error;
     }
   };
@@ -108,14 +120,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user || !userProfile) return;
 
     try {
-      const updatedProfile = {
-        ...userProfile,
+      const updatedProfileData = {
         ...data,
-        updatedAt: new Date(),
+        updatedAt: serverTimestamp(),
       };
 
-      await setDoc(doc(db, 'users', user.uid), updatedProfile, { merge: true });
-      setUserProfile(updatedProfile);
+      await setDoc(doc(db, 'users', user.uid), updatedProfileData, { merge: true });
+      
+      const userProfileForState: UserProfile = {
+          ...userProfile,
+          ...data,
+          updatedAt: Timestamp.now(),
+      };
+      setUserProfile(userProfileForState);
+
     } catch (error) {
       throw error;
     }
