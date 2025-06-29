@@ -38,6 +38,7 @@ export interface Application {
   candidateId: string;
   candidateName: string;
   candidateEmail: string;
+  employerId: string; // Added employerId for better querying
   status: 'pending' | 'viewed' | 'interview' | 'rejected' | 'hired';
   appliedAt: Date;
   statusMessage?: string;
@@ -160,30 +161,24 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
         where('candidateId', '==', user.uid),
         orderBy('appliedAt', 'desc')
       );
-    } else {
+    } else if (userType === 'employer') {
       // Employers see applications to their jobs
       q = query(
         collection(db, 'applications'),
+        where('employerId', '==', user.uid),
         orderBy('appliedAt', 'desc')
       );
+    } else {
+      // No valid user type, return empty
+      setApplications([]);
+      return;
     }
 
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const applicationsData: Application[] = [];
       
-      for (const docSnap of snapshot.docs) {
+      snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        
-        // For employers, filter applications to their jobs only
-        if (userType === 'employer') {
-          const jobDoc = await getDocs(query(
-            collection(db, 'jobs'),
-            where('__name__', '==', data.jobId),
-            where('employerId', '==', user.uid)
-          ));
-          
-          if (jobDoc.empty) continue;
-        }
         
         applicationsData.push({
           id: docSnap.id,
@@ -191,13 +186,14 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
           candidateId: data.candidateId,
           candidateName: data.candidateName,
           candidateEmail: data.candidateEmail,
+          employerId: data.employerId,
           status: data.status,
           appliedAt: data.appliedAt?.toDate() || new Date(),
           statusMessage: data.statusMessage,
           jobTitle: data.jobTitle,
           company: data.company,
         });
-      }
+      });
       
       console.log('✅ Applications loaded:', applicationsData.length);
       setApplications(applicationsData);
@@ -289,12 +285,13 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
         throw new Error('Vaga não encontrada');
       }
 
-      // Create application
+      // Create application with employerId
       const applicationData = {
         jobId,
         candidateId: user.uid,
         candidateName: userProfile.name,
         candidateEmail: userProfile.email,
+        employerId: job.employerId, // Include employerId for better querying
         status: 'pending' as const,
         appliedAt: Timestamp.now(),
         jobTitle: job.title,
