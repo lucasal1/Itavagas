@@ -10,6 +10,7 @@ export default function SharedLayout() {
       <Stack.Screen name="edit-job" />
       <Stack.Screen name="upload-photo" />
       <Stack.Screen name="upload-resume" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }

@@ -62,9 +62,7 @@ export default function EmployerProfile() {
       icon: <Settings color="#64748B" size={20} />,
       title: 'Configurações',
       description: 'Privacidade e preferências',
-      onPress: () => {
-        Alert.alert('Em breve', 'Funcionalidade em desenvolvimento');
-      },
+      onPress: () => router.push('/(shared)/settings'),
     },
     {
       icon: <HelpCircle color="#64748B" size={20} />,
