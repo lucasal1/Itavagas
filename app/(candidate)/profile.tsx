@@ -3,20 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  FileText, 
-  Edit3, 
-  Upload, 
-  LogOut,
-  Settings,
-  Bell,
-  HelpCircle,
-  Camera
-} from 'lucide-react-native';
+import { User, Mail, Phone, MapPin, FileText, CreditCard as Edit3, Upload, LogOut, Settings, Bell, CircleHelp as HelpCircle, Camera } from 'lucide-react-native';
 
 export default function CandidateProfile() {
   const { userProfile, logout } = useAuth();
