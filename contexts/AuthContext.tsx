@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubscribeProfile: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('Auth state changed:', firebaseUser?.uid);
       setUser(firebaseUser);
       
       // Clean up previous profile listener
@@ -62,13 +63,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           unsubscribeProfile = onSnapshot(
             doc(db, 'users', firebaseUser.uid),
             (userDoc) => {
+              console.log('User document snapshot:', userDoc.exists(), userDoc.data());
               if (userDoc.exists()) {
                 // O tipo de 'createdAt' e 'updatedAt' vindo do Firestore é Timestamp
                 const userData = userDoc.data() as UserProfile;
+                console.log('Setting user profile:', userData);
                 setUserProfile(userData);
                 setUserType(userData.userType);
               } else {
                 // Document doesn't exist yet, reset profile state
+                console.log('User document does not exist');
                 setUserProfile(null);
                 setUserType(null);
               }
@@ -88,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         }
       } else {
+        console.log('No user, resetting state');
         setUserProfile(null);
         setUserType(null);
         setLoading(false);
@@ -104,15 +109,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      console.log('Attempting to sign in with:', email);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('Sign in successful:', result.user.uid);
     } catch (error) {
+      console.error('Sign in error:', error);
       throw error;
     }
   };
 
   const signUp = async (email: string, password: string, name: string, userType: UserType) => {
     try {
+      console.log('Attempting to sign up with:', email, userType);
       const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
+      console.log('Sign up successful, creating profile for:', firebaseUser.uid);
       
       // Use serverTimestamp() para as datas
       const newUserProfile = {
@@ -126,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       await setDoc(doc(db, 'users', firebaseUser.uid), newUserProfile);
+      console.log('User profile created successfully');
       
       // Para o estado local, criamos um objeto com o Timestamp atual
       const userProfileForState: UserProfile = {
@@ -144,8 +155,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      console.log('Logging out');
       await signOut(auth);
+      setUser(null);
+      setUserProfile(null);
+      setUserType(null);
     } catch (error) {
+      console.error('Logout error:', error);
       throw error;
     }
   };
@@ -169,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserProfile(userProfileForState);
 
     } catch (error) {
+      console.error('Update profile error:', error);
       throw error;
     }
   };
@@ -183,6 +200,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     updateProfile,
   };
+
+  console.log('Auth context state:', { 
+    hasUser: !!user, 
+    hasProfile: !!userProfile, 
+    userType, 
+    loading 
+  });
 
   return (
     <AuthContext.Provider value={value}>

@@ -24,12 +24,37 @@ export default function SplashScreen() {
           // User is not authenticated, go to auth flow
           router.replace('/auth');
         }
-      }, 1500);
+      }, 2000); // Increased delay to ensure proper loading
 
       return () => clearTimeout(timer);
     }
   }, [user, userType, loading, router]);
 
+  // Show loading state while auth is being determined
+  if (loading) {
+    return (
+      <LinearGradient
+        colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+        style={styles.container}
+      >
+        <View style={styles.content}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>ITA</Text>
+            </View>
+            <Text style={styles.appName}>ITAVAGAS</Text>
+            <Text style={styles.tagline}>Conectando talentos do Sertão de Itaparica</Text>
+          </View>
+          
+          <View style={styles.footer}>
+            <Text style={styles.loadingText}>Carregando...</Text>
+          </View>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  // Show redirecting state
   return (
     <LinearGradient
       colors={['#1E40AF', '#3B82F6', '#60A5FA']}
@@ -46,7 +71,7 @@ export default function SplashScreen() {
         
         <View style={styles.footer}>
           <Text style={styles.loadingText}>
-            {loading ? 'Carregando...' : 'Redirecionando...'}
+            {user && userType ? 'Redirecionando...' : 'Iniciando...'}
           </Text>
         </View>
       </View>

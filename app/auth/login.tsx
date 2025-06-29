@@ -24,11 +24,27 @@ export default function Login() {
 
     setLoading(true);
     try {
+      console.log('Starting login process...');
       await signIn(formData.email, formData.password);
+      console.log('Login successful, navigation will be handled by AuthContext');
       // Don't manually navigate - let the AuthContext and app/index.tsx handle it
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert('Erro', 'E-mail ou senha incorretos');
+      
+      // More specific error handling
+      let errorMessage = 'E-mail ou senha incorretos';
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Usuário não encontrado. Verifique o e-mail ou cadastre-se.';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Senha incorreta. Tente novamente.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'E-mail inválido. Verifique o formato do e-mail.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Muitas tentativas de login. Tente novamente mais tarde.';
+      }
+      
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }
