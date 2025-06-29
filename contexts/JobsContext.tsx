@@ -9,8 +9,8 @@ import {
   where, 
   orderBy, 
   onSnapshot,
-  getDocs,
-  Timestamp 
+  Timestamp,
+  limit 
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
@@ -38,7 +38,7 @@ export interface Application {
   candidateId: string;
   candidateName: string;
   candidateEmail: string;
-  employerId: string; // Added employerId for better querying
+  employerId: string;
   status: 'pending' | 'viewed' | 'interview' | 'rejected' | 'hired';
   appliedAt: Date;
   statusMessage?: string;
@@ -84,7 +84,7 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Listen to jobs
+  // Otimizar carregamento de vagas com limite
   useEffect(() => {
     if (!user) {
       setJobs([]);
@@ -92,22 +92,20 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       return;
     }
 
-    console.log('🔄 Setting up jobs listener');
-    
     let q;
     if (userType === 'employer') {
-      // Employers see only their jobs
       q = query(
         collection(db, 'jobs'),
         where('employerId', '==', user.uid),
-        orderBy('postedAt', 'desc')
+        orderBy('postedAt', 'desc'),
+        limit(20) // Limitar para melhor performance
       );
     } else {
-      // Candidates see all active jobs
       q = query(
         collection(db, 'jobs'),
         where('status', '==', 'active'),
-        orderBy('postedAt', 'desc')
+        orderBy('postedAt', 'desc'),
+        limit(50) // Limitar vagas ativas
       );
     }
 
@@ -133,7 +131,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
         });
       });
       
-      console.log('✅ Jobs loaded:', jobsData.length);
       setJobs(jobsData);
       setLoading(false);
     }, (error) => {
@@ -144,32 +141,29 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
     return unsubscribe;
   }, [user, userType]);
 
-  // Listen to applications
+  // Otimizar carregamento de candidaturas
   useEffect(() => {
     if (!user) {
       setApplications([]);
       return;
     }
 
-    console.log('🔄 Setting up applications listener');
-    
     let q;
     if (userType === 'candidate') {
-      // Candidates see their applications
       q = query(
         collection(db, 'applications'),
         where('candidateId', '==', user.uid),
-        orderBy('appliedAt', 'desc')
+        orderBy('appliedAt', 'desc'),
+        limit(30) // Limitar candidaturas
       );
     } else if (userType === 'employer') {
-      // Employers see applications to their jobs
       q = query(
         collection(db, 'applications'),
         where('employerId', '==', user.uid),
-        orderBy('appliedAt', 'desc')
+        orderBy('appliedAt', 'desc'),
+        limit(50) // Limitar candidaturas recebidas
       );
     } else {
-      // No valid user type, return empty
       setApplications([]);
       return;
     }
@@ -195,7 +189,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
         });
       });
       
-      console.log('✅ Applications loaded:', applicationsData.length);
       setApplications(applicationsData);
     }, (error) => {
       console.error('❌ Error loading applications:', error);
@@ -209,8 +202,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       throw new Error('Only employers can create jobs');
     }
 
-    console.log('📝 Creating new job');
-    
     try {
       const newJob = {
         ...jobData,
@@ -222,7 +213,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       };
 
       await addDoc(collection(db, 'jobs'), newJob);
-      console.log('✅ Job created successfully');
     } catch (error) {
       console.error('❌ Error creating job:', error);
       throw error;
@@ -234,15 +224,12 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       throw new Error('Only employers can update jobs');
     }
 
-    console.log('📝 Updating job:', jobId);
-    
     try {
       const jobRef = doc(db, 'jobs', jobId);
       await updateDoc(jobRef, {
         ...updates,
         updatedAt: Timestamp.now(),
       });
-      console.log('✅ Job updated successfully');
     } catch (error) {
       console.error('❌ Error updating job:', error);
       throw error;
@@ -254,11 +241,8 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       throw new Error('Only employers can delete jobs');
     }
 
-    console.log('🗑️ Deleting job:', jobId);
-    
     try {
       await deleteDoc(doc(db, 'jobs', jobId));
-      console.log('✅ Job deleted successfully');
     } catch (error) {
       console.error('❌ Error deleting job:', error);
       throw error;
@@ -270,28 +254,23 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       throw new Error('Only candidates can apply to jobs');
     }
 
-    console.log('📝 Applying to job:', jobId);
-    
     try {
-      // Check if already applied
       const existingApplication = applications.find(app => app.jobId === jobId);
       if (existingApplication) {
         throw new Error('Você já se candidatou a esta vaga');
       }
 
-      // Get job details
       const job = jobs.find(j => j.id === jobId);
       if (!job) {
         throw new Error('Vaga não encontrada');
       }
 
-      // Create application with employerId
       const applicationData = {
         jobId,
         candidateId: user.uid,
         candidateName: userProfile.name,
         candidateEmail: userProfile.email,
-        employerId: job.employerId, // Include employerId for better querying
+        employerId: job.employerId,
         status: 'pending' as const,
         appliedAt: Timestamp.now(),
         jobTitle: job.title,
@@ -300,14 +279,11 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
 
       await addDoc(collection(db, 'applications'), applicationData);
 
-      // Increment job applicants count
       const jobRef = doc(db, 'jobs', jobId);
       await updateDoc(jobRef, {
         applicants: job.applicants + 1,
         updatedAt: Timestamp.now(),
       });
-
-      console.log('✅ Application submitted successfully');
     } catch (error) {
       console.error('❌ Error applying to job:', error);
       throw error;
@@ -319,8 +295,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       throw new Error('Only employers can update application status');
     }
 
-    console.log('📝 Updating application status:', applicationId, status);
-    
     try {
       const applicationRef = doc(db, 'applications', applicationId);
       const updates: any = {
@@ -333,7 +307,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
       }
 
       await updateDoc(applicationRef, updates);
-      console.log('✅ Application status updated successfully');
     } catch (error) {
       console.error('❌ Error updating application status:', error);
       throw error;
@@ -341,8 +314,6 @@ export const JobsProvider = ({ children }: JobsProviderProps) => {
   };
 
   const incrementJobViews = async (jobId: string) => {
-    console.log('👁️ Incrementing job views:', jobId);
-    
     try {
       const job = jobs.find(j => j.id === jobId);
       if (!job) return;

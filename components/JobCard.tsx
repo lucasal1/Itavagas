@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MapPin, DollarSign, Clock, Users } from 'lucide-react-native';
 import { Job } from '@/contexts/JobsContext';
@@ -11,13 +11,13 @@ interface JobCardProps {
   showStats?: boolean;
 }
 
-export default function JobCard({ 
+const JobCard = memo(({ 
   job, 
   onPress, 
   onApply, 
   showApplyButton = false,
   showStats = false 
-}: JobCardProps) {
+}: JobCardProps) => {
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
@@ -32,8 +32,8 @@ export default function JobCard({
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.header}>
         <View style={styles.titleContainer}>
-          <Text style={styles.title}>{job.title}</Text>
-          <Text style={styles.company}>{job.company}</Text>
+          <Text style={styles.title} numberOfLines={1}>{job.title}</Text>
+          <Text style={styles.company} numberOfLines={1}>{job.company}</Text>
         </View>
         <View style={styles.timeContainer}>
           <Clock color="#64748B" size={16} />
@@ -44,12 +44,12 @@ export default function JobCard({
       <View style={styles.details}>
         <View style={styles.detailItem}>
           <MapPin color="#64748B" size={16} />
-          <Text style={styles.detailText}>{job.location}</Text>
+          <Text style={styles.detailText} numberOfLines={1}>{job.location}</Text>
         </View>
         {job.salary && (
           <View style={styles.detailItem}>
             <DollarSign color="#64748B" size={16} />
-            <Text style={styles.detailText}>{job.salary}</Text>
+            <Text style={styles.detailText} numberOfLines={1}>{job.salary}</Text>
           </View>
         )}
       </View>
@@ -62,7 +62,7 @@ export default function JobCard({
         <View style={styles.requirements}>
           {job.requirements.slice(0, 3).map((requirement, index) => (
             <View key={index} style={styles.requirementTag}>
-              <Text style={styles.requirementText}>{requirement}</Text>
+              <Text style={styles.requirementText} numberOfLines={1}>{requirement}</Text>
             </View>
           ))}
           {job.requirements.length > 3 && (
@@ -94,7 +94,11 @@ export default function JobCard({
       </View>
     </TouchableOpacity>
   );
-}
+});
+
+JobCard.displayName = 'JobCard';
+
+export default JobCard;
 
 const styles = StyleSheet.create({
   container: {
@@ -147,11 +151,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   detailText: {
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#64748B',
+    flex: 1,
   },
   description: {
     fontSize: 14,
@@ -171,6 +177,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    maxWidth: 120,
   },
   requirementText: {
     fontSize: 12,

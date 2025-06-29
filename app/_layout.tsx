@@ -19,16 +19,11 @@ function RootLayoutNav() {
   const segments = useSegments();
 
   useEffect(() => {
-    // Espera até que o estado de autenticação seja carregado
-    if (loading) {
-      return;
-    }
+    if (loading) return;
 
     const inAuthGroup = segments[0] === 'auth';
 
     if (user && userType) {
-      // O utilizador está logado e tem um perfil.
-      // Se ele estiver no grupo de autenticação, redireciona-o para a página principal.
       if (inAuthGroup) {
         if (userType === 'candidate') {
           router.replace('/(candidate)');
@@ -36,17 +31,11 @@ function RootLayoutNav() {
           router.replace('/(employer)');
         }
       }
-    } else if (!user) {
-      // O utilizador não está logado.
-      // Se ele não estiver no grupo de autenticação, redireciona-o para lá.
-      if (!inAuthGroup) {
-        router.replace('/auth');
-      }
+    } else if (!user && !inAuthGroup) {
+      router.replace('/auth');
     }
   }, [user, userType, loading, segments]);
 
-  // Enquanto o estado de autenticação está a ser carregado, o ecrã de carregamento (app/index.tsx) é exibido.
-  // Não renderizamos nada aqui para evitar piscar.
   if (loading) {
     return null;
   }
@@ -66,7 +55,6 @@ function RootLayoutNav() {
   );
 }
 
-// Layout raiz que envolve toda a aplicação
 export default function RootLayout() {
   useFrameworkReady();
   
