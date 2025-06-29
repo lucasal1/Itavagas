@@ -3,20 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { 
-  Building, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Edit3, 
-  Upload, 
-  LogOut,
-  Settings,
-  Bell,
-  HelpCircle,
-  BarChart3,
-  Users
-} from 'lucide-react-native';
+import { Building, Mail, Phone, MapPin, CreditCard as Edit3, Upload, LogOut, Settings, Bell, CircleHelp as HelpCircle, ChartBar as BarChart3, Users } from 'lucide-react-native';
 
 export default function EmployerProfile() {
   const { userProfile, logout } = useAuth();
