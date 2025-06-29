@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
-import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react-native';
+import { CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Info, X } from 'lucide-react-native';
 import { useNotifications, Notification } from '@/contexts/NotificationContext';
 
 interface NotificationBannerProps {
