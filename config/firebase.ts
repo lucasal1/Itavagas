@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  // Add your Firebase config here
-  apiKey: "your-api-key",
-  authDomain: "itavagas-app.firebaseapp.com",
-  projectId: "itavagas-app",
-  storageBucket: "itavagas-app.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+  apiKey: "AIzaSyDl2SbmqvcNP3ha8SwDyKiATbYWxK_GTx4",
+  authDomain: "itavagas-9c0f5.firebaseapp.com",
+  projectId: "itavagas-9c0f5",
+  storageBucket: "itavagas-9c0f5.firebasestorage.app",
+  messagingSenderId: "427095304175",
+  appId: "1:427095304175:web:6e9fbf2eccfaa7e067781a",
+  measurementId: "G-XS617QBKYE"
 };
 
 const app = initializeApp(firebaseConfig);
