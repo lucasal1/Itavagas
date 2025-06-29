@@ -25,8 +25,9 @@ export default function Login() {
     setLoading(true);
     try {
       await signIn(formData.email, formData.password);
-      // Navigation will be handled by AuthContext
+      // Don't manually navigate - let the AuthContext and app/index.tsx handle it
     } catch (error: any) {
+      console.error('Login error:', error);
       Alert.alert('Erro', 'E-mail ou senha incorretos');
     } finally {
       setLoading(false);
@@ -66,6 +67,7 @@ export default function Login() {
               placeholderTextColor="#94A3B8"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
             />
           </View>
 
@@ -79,6 +81,7 @@ export default function Login() {
                 placeholder="Digite sua senha"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
+                autoComplete="password"
               />
               <TouchableOpacity
                 style={styles.eyeButton}
